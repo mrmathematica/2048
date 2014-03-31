@@ -169,7 +169,7 @@ class Game2048(Widget):
     cube_size = NumericProperty(10)
     cube_padding = NumericProperty(10)
     score = NumericProperty(0)
-
+    
     def __init__(self, **kwargs):
         super(Game2048, self).__init__()
         self.grid = [
@@ -178,7 +178,7 @@ class Game2048(Widget):
             [None, None, None, None],
             [None, None, None, None]]
 
-        # bind keyboard
+       # bind keyboard
         Window.bind(on_key_down=self.on_key_down)
         Window.on_keyboard = lambda *x: None
 
@@ -193,6 +193,8 @@ class Game2048(Widget):
             self.move_leftright(False)
         elif key == 275:
             self.move_leftright(True)
+        elif key == 8 or key == 32:
+            self.undo()
         elif key == 27 and platform == 'android':
             from jnius import autoclass
             PythonActivity = autoclass('org.renpy.android.PythonActivity')
@@ -278,10 +280,22 @@ class Game2048(Widget):
             self.move_topdown(dy > 0)
         return True
 
+    def deepcopy(self, grid):
+        ret=[[None, None, None, None],
+             [None, None, None, None],
+             [None, None, None, None],
+             [None, None, None, None]]
+        for ix, iy in self.iterate_pos():
+            if grid[ix][iy]:
+                ret[ix][iy] = grid[ix][iy].number
+        return ret
+
     def move_leftright(self, right):
         r = range(3, -1, -1) if right else range(4)
         grid = self.grid
         moved = False
+        old_grid = self.deepcopy(grid)
+        old_score = self.score
 
         for iy in range(4):
             # get all the cube for the current line
@@ -307,12 +321,16 @@ class Game2048(Widget):
                     cube.move_to(pos)
 
         if not self.check_end() and moved:
+            self.pre_score.append(old_score)
+            self.pre_grid.append(old_grid)
             Clock.schedule_once(self.spawn_number, .20)
 
     def move_topdown(self, top):
         r = range(3, -1, -1) if top else range(4)
         grid = self.grid
         moved = False
+        old_grid = self.deepcopy(grid)
+        old_score = self.score
 
         for ix in range(4):
             # get all the cube for the current line
@@ -338,6 +356,8 @@ class Game2048(Widget):
                     cube.move_to(pos)
 
         if not self.check_end() and moved:
+            self.pre_score.append(old_score)
+            self.pre_grid.append(old_grid)
             Clock.schedule_once(self.spawn_number, .20)
 
     def combine(self, cubes):
@@ -408,6 +428,28 @@ class Game2048(Widget):
         Clock.schedule_once(self.spawn_number, .1)
         Clock.schedule_once(self.spawn_number, .1)
         self.ids.end.opacity = 0
+
+        self.pre_grid = []
+        self.pre_score = []
+
+    def undo(self):
+        if self.pre_score:
+            self.score = self.pre_score.pop()
+        else:
+            return
+        for ix, iy, child in self.iterate():
+            child.destroy()
+        self.grid = [
+            [None, None, None, None],
+            [None, None, None, None],
+            [None, None, None, None],
+            [None, None, None, None]]
+        self.reposition()
+        old_grid = self.pre_grid.pop()
+        for ix, iy in self.iterate_pos():
+            num = old_grid[ix][iy]
+            if num:
+                self.spawn_number_at(ix, iy, num)
 
 
 class Game2048App(App):
