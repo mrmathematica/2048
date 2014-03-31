@@ -169,7 +169,7 @@ class Game2048(Widget):
     cube_size = NumericProperty(10)
     cube_padding = NumericProperty(10)
     score = NumericProperty(0)
-    
+
     def __init__(self, **kwargs):
         super(Game2048, self).__init__()
         self.grid = [
@@ -178,7 +178,7 @@ class Game2048(Widget):
             [None, None, None, None],
             [None, None, None, None]]
 
-       # bind keyboard
+        # bind keyboard
         Window.bind(on_key_down=self.on_key_down)
         Window.on_keyboard = lambda *x: None
 
@@ -285,9 +285,8 @@ class Game2048(Widget):
              [None, None, None, None],
              [None, None, None, None],
              [None, None, None, None]]
-        for ix, iy in self.iterate_pos():
-            if grid[ix][iy]:
-                ret[ix][iy] = grid[ix][iy].number
+        for ix, iy, number in self.iterate():
+            ret[ix][iy] = number.number
         return ret
 
     def move_leftright(self, right):
